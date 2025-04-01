@@ -21,7 +21,11 @@ func main() {
 		log.Fatal("PORT is not found in the environment")
 	}
 
-	// A router decides where to send web requests based on their URLs.
+	// +--------------+
+	// | Router setup |
+	// +--------------+
+
+	// A router decides where to send web requests based on their URLs
 	router := chi.NewRouter()
 
 	// Adding CORS configuration to allow reqs from browser
@@ -35,11 +39,18 @@ func main() {
 		MaxAge:           300,
 	}))
 
-	// We want to mount this to another path
+
+	// Sets up a v1 router, that is mounted to the main router -> v1/healthz would invoke the handlerReadiness 
 	v1Router := chi.NewRouter()
-	v1Router.HandleFunc("/healthz", handlerReadiness)
+	v1Router.Get("/healthz", handlerReadiness) 
+	v1Router.Get("/err", handlerError) 
 
 	router.Mount("/v1", v1Router)
+
+
+	// +--------------+
+	// | Server setup |
+	// +--------------+
 
 	// Set up server that does the following:
 	// 1. Use our router to handle incoming reqs
