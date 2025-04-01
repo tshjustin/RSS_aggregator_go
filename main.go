@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"log"
 	"net/http"
 	"os"
@@ -8,7 +9,15 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/go-chi/cors"
 	"github.com/joho/godotenv"
+	"github.com/tshjustin/RSS-aggragator-go/internal/database"
+
+	_ "github.com/lib/pq" // Includes the code in the program although not using directly - This is a database driver
+
 )
+
+type apiConfig struct {
+	DB * database.Queries
+}
 
 func main() {
 
@@ -19,6 +28,23 @@ func main() {
 
 	if portString == "" {
 		log.Fatal("PORT is not found in the environment")
+	}
+
+	dbURL := os.Getenv("DB_URL")
+	if dbURL == "" {
+		log.Fatal("No DB URL Found")
+	}
+
+	// Connect to the database now 
+	conn ,err := sql.Open("postgres", dbURL)
+	if err != nil {
+		log.Fatal("Connect Connect to the Database", err)
+	}
+
+	// Convert sql.queries to what is needed by Open() 
+	// Now with this, if we pass to some handler, they can access the DB 
+	apiCfg := apiConfig {
+		DB: database.New(conn),
 	}
 
 	// +--------------+
@@ -44,7 +70,7 @@ func main() {
 	v1Router := chi.NewRouter()
 	v1Router.Get("/healthz", handlerReadiness) 
 	v1Router.Get("/err", handlerError) 
-
+	v1Router.Post("/users", apiCfg.handlerCreateUser) // Now the handler has access to the DB - Note how it becomes a METHDO instead, and we access via the dot operator
 	router.Mount("/v1", v1Router)
 
 
@@ -63,9 +89,9 @@ func main() {
 	log.Printf("Server starting on %v", portString)
 
 	// Start the server
-	err := srv.ListenAndServe() // This would allow actual changes to the server when using a pointer
-	if err != nil {
-		log.Fatal(err)
+	err2 := srv.ListenAndServe() // This would allow actual changes to the server when using a pointer
+	if err2 != nil {
+		log.Fatal(err2)
 	}
 
 }
