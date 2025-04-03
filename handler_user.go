@@ -44,6 +44,6 @@ func (cfg *apiConfig) handlerCreateUser(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// rather than responding with DB user, we respond with our own user
-	// espondWithJson(w, 200, user)
+	// respondWithJson(w, 200, user)
 	respondWithJson(w, 200, databaseUserToUser(user))
 }
