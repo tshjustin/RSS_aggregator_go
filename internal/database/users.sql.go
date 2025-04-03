@@ -14,9 +14,11 @@ import (
 
 const createUser = `-- name: CreateUser :one
 
-INSERT INTO users (id, created_at, updated_at, name)
-VALUES ($1, $2, $3, $4) -- This would create a function CreateUser, with 4 parameters
-RETURNING id, created_at, updated_at, name
+INSERT INTO users (id, created_at, updated_at, name, api_key)
+VALUES ($1, $2, $3, $4, 
+    encode(sha256(random()::text::bytea), 'hex')
+) -- This would create a function CreateUser, with 4 parameters
+RETURNING id, created_at, updated_at, name, api_key
 `
 
 type CreateUserParams struct {
@@ -40,6 +42,28 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Name,
+		&i.ApiKey,
+	)
+	return i, err
+}
+
+const getUserByAPIKey = `-- name: GetUserByAPIKey :one
+ 
+
+SELECT id, created_at, updated_at, name, api_key FROM users WHERE api_key = $1
+`
+
+// NOTE must run sqlc generate -> Would convert the sql to .go type safe code under /internal (that is defined in our yaml)
+// Now we need to update our query -- SQL would handle the creation of the API Key once we add this function inside !
+func (q *Queries) GetUserByAPIKey(ctx context.Context, apiKey string) (User, error) {
+	row := q.db.QueryRowContext(ctx, getUserByAPIKey, apiKey)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Name,
+		&i.ApiKey,
 	)
 	return i, err
 }
