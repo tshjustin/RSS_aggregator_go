@@ -11,13 +11,16 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/tshjustin/RSS-aggragator-go/internal/database"
 
-	_ "github.com/lib/pq" // Includes the code in the program although not using directly - This is a database driver
+	_ "github.com/lib/pq" // postgres driver. "driver" that allows communcation of go code with db - "_" calls the init(), that registers the driver with central sql package - So can use common .sql commands
 
 )
 
+// apiConfig struct serves as a container for configuration and dependencies
+// In this case holds a refernece to DB connection 
+// Allows us to pass DB connection into function (dependecny injection) | Pass this struct around to diff functions etc 
 type apiConfig struct {
-	DB * database.Queries
-}
+	DB * database.Queries // Notice that we use a pointer here - Generally we do this since such items can be large and passing refernece are better 
+} // DB field, that is populated by a pointer to a database.Queries object 
 
 func main() {
 
@@ -35,7 +38,12 @@ func main() {
 		log.Fatal("No DB URL Found")
 	}
 
-	// Connect to the database now 
+	
+	// +--------------+
+	// | DB setup     |
+	// +--------------+
+
+	// Already registered the database connection 
 	conn ,err := sql.Open("postgres", dbURL)
 	if err != nil {
 		log.Fatal("Connect Connect to the Database", err)
@@ -44,7 +52,7 @@ func main() {
 	// Convert sql.queries to what is needed by Open() 
 	// Now with this, if we pass to some handler, they can access the DB 
 	apiCfg := apiConfig {
-		DB: database.New(conn),
+		DB: database.New(conn), // creates a new Queries struct - Takes connection object, wrap it in queries struct for type safety, and stores a pointer to that queries in the DB field. 
 	}
 
 	// +--------------+
@@ -52,7 +60,7 @@ func main() {
 	// +--------------+
 
 	// A router decides where to send web requests based on their URLs
-	router := chi.NewRouter()
+	router := chi.NewRouter() 
 
 	// Adding CORS configuration to allow reqs from browser
 	// This would allow the server to send more http headers in response - Tells browser "hey you can send from https / http | use this methods etc -> Note that this is a SERVER response"
